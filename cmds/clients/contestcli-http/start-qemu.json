@@ -1,0 +1,62 @@
+{
+    "JobName": "test job",
+    "Runs": 3,
+    "RunInterval": "3s",
+    "Tags": ["test", "csv"],
+    "TestDescriptors": [
+        {
+            "TargetManagerName": "TargetList",
+            "TargetManagerAcquireParameters": {
+                "Targets": [
+                    {
+                        "Name": "qemu",
+                        "ID": "1234"
+                    }
+                ]
+            },
+            "TargetManagerReleaseParameters": {
+            },
+            "TestFetcherName": "literal",
+            "TestFetcherFetchParameters": {
+                "TestName": "Literal test",
+                "Steps": [
+                    {
+                        "name": "cmd",
+                        "parameters": {
+                            "executable": ["ping"],
+                            "args": ["{{ ToUpper .Name }}"]
+                        }
+		    },
+                    {
+                        "name": "sshcmd",
+                        "parameters": {
+                            "user": ["your_username"],
+                            "host": ["{{ .Name }}"],
+                            "private_key_file": ["/home/user/.ssh/id_rsa"],
+                            "executable": ["uname"],
+                            "args": ["-a"]
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "Reporting": {
+        "RunReporters": [
+            {
+                "Name": "TargetSuccess",
+                "Parameters": {
+                    "SuccessExpression": ">80%"
+                }
+            },
+            {
+                "Name": "Noop"
+            }
+        ],
+        "FinalReporters": [
+            {
+                "Name": "noop"
+            }
+        ]
+    }
+}
