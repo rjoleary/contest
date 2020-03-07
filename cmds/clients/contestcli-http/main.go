@@ -59,7 +59,7 @@ func main() {
 	flag.Parse()
 	verb := flag.Arg(0)
 	if err := run(verb); err != nil {
-		fmt.Fprintf(os.Stderr, "%s", err)
+		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 }
@@ -71,6 +71,9 @@ func run(verb string) error {
 	params.Set("requestor", *flagRequestor)
 	switch verb {
 	case "start":
+		if flag.NArg() != 1 {
+			return fmt.Errorf("expected 0 args, but found %d", flag.NArg())
+		}
 		fmt.Fprintf(os.Stderr, "Reading from stdin...\n")
 		jobDesc, err := ioutil.ReadAll(os.Stdin)
 		if err != nil {
@@ -78,12 +81,18 @@ func run(verb string) error {
 		}
 		params.Add("jobDesc", string(jobDesc))
 	case "stop", "status", "retry":
+		if flag.NArg() != 2 {
+			return fmt.Errorf("expected 1 args, but found %d", flag.NArg())
+		}
 		jobID := flag.Arg(1)
 		if jobID == "" {
 			return errors.New("missing job ID")
 		}
 		params.Set("jobID", jobID)
 	case "version":
+		if flag.NArg() != 1 {
+			return fmt.Errorf("expected 0 args, but found %d", flag.NArg())
+		}
 		// no params for protocol version
 	default:
 		return fmt.Errorf("invalid verb: '%s'", verb)
