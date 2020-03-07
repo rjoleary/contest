@@ -28,8 +28,16 @@ var Name = "Cmd"
 
 var log = logging.GetLogger("teststeps/" + strings.ToLower(Name))
 
+// events that we may emit during the plugin's lifecycle. This is used in Events below.
+const (
+	CmdStart  = event.Name("CmdStart")
+	CmdEnd    = event.Name("CmdEnd")
+	CmdStdout = event.Name("CmdStdout")
+	CmdStderr = event.Name("CmdStderr")
+)
+
 // Events defines the events that a TestStep is allow to emit
-var Events = []event.Name{event.Name("CmdStart"), event.Name("CmdEnd")}
+var Events = []event.Name{CmdStart, CmdEnd, CmdStdout, CmdStderr}
 
 // Cmd is used to run arbitrary commands as test steps.
 type Cmd struct {
@@ -40,6 +48,11 @@ type Cmd struct {
 // Name returns the plugin name.
 func (ts Cmd) Name() string {
 	return Name
+}
+
+type cmdResult struct {
+	err            error
+	stdout, stderr bytes.Buffer
 }
 
 // Run executes the cmd step.
@@ -60,17 +73,29 @@ func (ts *Cmd) Run(cancel, pause <-chan struct{}, ch test.TestStepChannels, para
 			args = append(args, expArg)
 		}
 		cmd := exec.CommandContext(ctx, ts.executable, args...)
-		var stdout, stderr bytes.Buffer
-		cmd.Stdout, cmd.Stderr = &stdout, &stderr
 		log.Printf("Running command '%+v'", cmd)
-		errCh := make(chan error)
+		resultCh := make(chan cmdResult)
 		go func() {
-			errCh <- cmd.Run()
+			var stdout, stderr bytes.Buffer
+			cmd.Stdout, cmd.Stderr = &stdout, &stderr
+			resultCh <- cmdResult{cmd.Run(), stdout, stderr}
 			log.Infof("Stdout of command '%s' with args '%s' is '%s'", cmd.Path, cmd.Args, stdout.Bytes())
 		}()
 		select {
-		case err := <-errCh:
-			log.Warningf("Stderr of command '%+v' is: '%s'", cmd, stderr.Bytes())
+		case result := <-resultCh:
+			err := ev.Emit(testevent.Data{
+				EventName: CmdStdout,
+				Target:    target,
+				Payload:   testevent.PayloadFromString(result.stdout.String()),
+			})
+			log.Warningf("failed to emit stdout event: %v", err)
+			err = ev.Emit(testevent.Data{
+				EventName: CmdStderr,
+				Target:    target,
+				Payload:   testevent.PayloadFromString(result.stderr.String()),
+			})
+			log.Warningf("failed to emit stderr event: %v", err)
+			log.Warningf("Stderr of command '%+v' is: %q", cmd, result.stderr.String())
 			return err
 		case <-cancel:
 			return nil

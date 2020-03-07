@@ -8,6 +8,7 @@
 package testevent_test
 
 import (
+	"bytes"
 	"errors"
 	"testing"
 	"time"
@@ -17,6 +18,38 @@ import (
 
 	. "github.com/facebookincubator/contest/pkg/event/testevent"
 )
+
+func TestPayloadFromString(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "simple",
+			input: "hello world",
+			want:  `"hello world"`,
+		},
+		{
+			name:  "special characters",
+			input: `hello world "'!@#$%^&*()`,
+			want:  `"hello world \"'!@#$%^\u0026*()"`,
+		},
+		{
+			name:  "empty",
+			input: "",
+			want:  `""`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := PayloadFromString(tt.input)
+			if !bytes.Equal([]byte(*got), []byte(tt.want)) {
+				t.Errorf("PayloadFromString(%q) = %q; want %q", tt.input, *got, tt.want)
+			}
+		})
+	}
+}
 
 func TestBuildQuery_Positive(t *testing.T) {
 	_, err := QueryFields{

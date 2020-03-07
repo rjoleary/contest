@@ -33,6 +33,18 @@ type Data struct {
 	Payload   *json.RawMessage
 }
 
+// PayloadFromString converts a string to a type suitable for Data.Payload.
+func PayloadFromString(str string) *json.RawMessage {
+	data, err := json.Marshal(str)
+	if err != nil {
+		// The Marshal should never fail on a raw string. Just in case,
+		// this is a simple fallback.
+		return nil
+	}
+	msg := json.RawMessage(data)
+	return &msg
+}
+
 // Event models an event object that can be emitted by a TestStep
 type Event struct {
 	EmitTime time.Time
