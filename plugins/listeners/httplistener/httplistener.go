@@ -34,7 +34,7 @@ type HTTPAPIResponse struct {
 	// return in the HTTP API response.
 	Type  string
 	Data  interface{}
-	Error *string
+	Error *string `json:",omitempty"`
 }
 
 // NewHTTPAPIResponse returns an HTTPAPIResponse from an api.Response object. In
